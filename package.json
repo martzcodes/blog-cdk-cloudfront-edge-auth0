@@ -6,23 +6,31 @@
   },
   "scripts": {
     "build": "tsc",
+    "deploy": "npm run esbuild && npm run cdk deploy -- -v",
+    "esbuild": "esbuild ./lib/auth.ts --outfile=./lib/auth-lambda/index.js --bundle --platform=node --target=node16 --external:aws-sdk",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.107",
     "@types/jest": "^27.5.2",
+    "@types/jsonwebtoken": "^8.5.9",
     "@types/node": "10.17.27",
     "@types/prettier": "2.6.0",
+    "aws-cdk": "2.45.0",
+    "esbuild": "^0.15.10",
     "jest": "^27.5.1",
     "ts-jest": "^27.1.4",
-    "aws-cdk": "2.45.0",
     "ts-node": "^10.9.1",
     "typescript": "~3.9.7"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.186.0",
     "aws-cdk-lib": "2.45.0",
+    "aws-lambda": "^1.0.7",
     "constructs": "^10.0.0",
+    "jsonwebtoken": "^8.5.1",
     "source-map-support": "^0.5.21"
   }
 }

@@ -1,7 +1,11 @@
 import * as cdk from "aws-cdk-lib";
 import { CfnOutput, RemovalPolicy } from "aws-cdk-lib";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
-import { CacheHeaderBehavior, CachePolicy, CacheQueryStringBehavior } from "aws-cdk-lib/aws-cloudfront";
+import {
+  CacheHeaderBehavior,
+  CachePolicy,
+  CacheQueryStringBehavior,
+} from "aws-cdk-lib/aws-cloudfront";
 import { S3Origin } from "aws-cdk-lib/aws-cloudfront-origins";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { Code, Runtime } from "aws-cdk-lib/aws-lambda";
@@ -55,7 +59,7 @@ export class BlogCdkCloudfrontEdgeAuth0Stack extends cdk.Stack {
       defaultRootObject: "index.html",
       defaultBehavior: {
         origin: new S3Origin(bucket, { originAccessIdentity }),
-        cachePolicy:new CachePolicy(this, `CachePolicy`, {
+        cachePolicy: new CachePolicy(this, `CachePolicy`, {
           cookieBehavior: cloudfront.CacheCookieBehavior.all(),
           queryStringBehavior: CacheQueryStringBehavior.all(),
         }),

@@ -1,9 +1,7 @@
 import type {
   CloudFrontHeaders,
   CloudFrontRequest,
-  CloudFrontRequestCallback,
   CloudFrontRequestEvent,
-  CloudFrontRequestResult,
   CloudFrontResponse,
 } from "aws-lambda";
 import {
@@ -80,7 +78,11 @@ const redirect = (
 const loginCallback = async (
   request: CloudFrontRequest
 ): Promise<CloudFrontResponse | void> => {
-  console.log(`callback? ${request.uri} !== ${auth0Creds.CALLBACK_PATH}: ${request.uri !== auth0Creds.CALLBACK_PATH}`)
+  console.log(
+    `callback? ${request.uri} !== ${auth0Creds.CALLBACK_PATH}: ${
+      request.uri !== auth0Creds.CALLBACK_PATH
+    }`
+  );
   if (request.uri !== auth0Creds.CALLBACK_PATH) {
     return;
   }
@@ -126,20 +128,24 @@ const loginCallback = async (
       if (res.statusCode! >= 300) {
         throw new Error("Bad Response");
       }
-  
+
       let body = "";
       res.on("data", (d) => (body += d));
       res.on("end", () => {
         const json = JSON.parse(body);
         const token = json.id_token;
-  
+
         if (!token) {
           throw new Error("Unauthorized");
         }
-  
+
         // store this in a cookie, then redirect the user
-        const dest = `https://${request.headers.host[0].value}${params.dest || "/"}`;
-        return resolve(redirect(dest, [{ name: "session-token", value: token }]));
+        const dest = `https://${request.headers.host[0].value}${
+          params.dest || "/"
+        }`;
+        return resolve(
+          redirect(dest, [{ name: "session-token", value: token }])
+        );
       });
     });
     req.on("error", (e) => {
@@ -206,51 +212,36 @@ const checkToken = (request: CloudFrontRequest) => {
   return redirect(redirectUrl, [{ name: "session-token", value: "" }]);
 };
 
-const asyncHandler = async (
-  request: CloudFrontRequest
-): Promise<CloudFrontRequestResult> => {
-  if (!auth0Creds) {
-    const getSecret = new GetSecretValueCommand({
-      SecretId,
-    });
-    const secret = await sm.send(getSecret);
-    auth0Creds = JSON.parse(secret.SecretString!) as Auth0Creds;
-  }
-  const loggedIn = await loginCallback(request);
-  if (loggedIn) {
-    console.log('was login callback');
-    return loggedIn;
-  }
-  const redirectToLogin = checkToken(request);
-  if (redirectToLogin) {
-    console.log('not logged in');
-    return redirectToLogin;
-  }
-
-  console.log('authenticated!');
-  return request;
-};
-
-export const handler = (
-  event: CloudFrontRequestEvent,
-  _: any,
-  callback: CloudFrontRequestCallback
-) => {
+export const handler = async (event: CloudFrontRequestEvent) => {
   const request = event.Records[0].cf.request;
 
   if (PUBLIC_PATHS.find((pattern) => pattern.test(request.uri))) {
-    callback(null, request);
-    return;
+    return request;
   }
 
-  console.log(JSON.stringify(event, null, 2));
-  asyncHandler(request)
-    .then((res) => {
-      console.log(JSON.stringify(res, null, 2));
-      callback(null, res);
-    })
-    .catch((e) => {
-      console.log(e);
-      callback(null, unauthorizedResponse);
-    });
+  try {
+    if (!auth0Creds) {
+      const getSecret = new GetSecretValueCommand({
+        SecretId,
+      });
+      const secret = await sm.send(getSecret);
+      auth0Creds = JSON.parse(secret.SecretString!) as Auth0Creds;
+    }
+    const loggedIn = await loginCallback(request);
+    if (loggedIn) {
+      console.log("was login callback");
+      return loggedIn;
+    }
+    const redirectToLogin = checkToken(request);
+    if (redirectToLogin) {
+      console.log("not logged in");
+      return redirectToLogin;
+    }
+
+    console.log("authenticated!");
+    return request;
+  } catch (e) {
+    console.log(e);
+    return unauthorizedResponse;
+  }
 };

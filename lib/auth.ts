@@ -49,7 +49,6 @@ export interface Auth0Creds {
 }
 
 let auth0Creds: Auth0Creds;
-let distributionDomainName: string;
 
 const redirect = (
   newLocation: string,
@@ -104,7 +103,7 @@ const loginCallback = async (
   // Call Auth0 to get JWT token
   const postData = stringify({
     client_id: auth0Creds.AUTH0_CLIENT_ID,
-    redirect_uri: `https://${distributionDomainName}${auth0Creds.CALLBACK_PATH}`,
+    redirect_uri: `https://${request.headers.host[0].value}${auth0Creds.CALLBACK_PATH}`,
     client_secret: auth0Creds.AUTH0_CLIENT_SECRET,
     code: params.code,
     grant_type: "authorization_code",
@@ -139,7 +138,7 @@ const loginCallback = async (
         }
   
         // store this in a cookie, then redirect the user
-        const dest = `https://${distributionDomainName}${params.dest || "/"}`;
+        const dest = `https://${request.headers.host[0].value}${params.dest || "/"}`;
         return resolve(redirect(dest, [{ name: "session-token", value: token }]));
       });
     });
@@ -200,7 +199,7 @@ const checkToken = (request: CloudFrontRequest) => {
   const encodedRedirectUrl = encodeURIComponent(
     request.querystring ? `${request.uri}?${request.querystring}` : request.uri
   );
-  const callbackUrl = `https://${distributionDomainName}${auth0Creds.CALLBACK_PATH}?dest=${encodedRedirectUrl}`;
+  const callbackUrl = `https://${request.headers.host[0].value}${auth0Creds.CALLBACK_PATH}?dest=${encodedRedirectUrl}`;
   const encodedCallback = encodeURIComponent(callbackUrl);
   const redirectUrl = `${auth0Creds.AUTH0_LOGIN_URL}?client=${auth0Creds.AUTH0_CLIENT_ID}&redirect_uri=${encodedCallback}`;
 
@@ -238,7 +237,6 @@ export const handler = (
   callback: CloudFrontRequestCallback
 ) => {
   const request = event.Records[0].cf.request;
-  distributionDomainName = event.Records[0].cf.config.distributionDomainName;
 
   if (PUBLIC_PATHS.find((pattern) => pattern.test(request.uri))) {
     callback(null, request);
